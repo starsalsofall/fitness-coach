@@ -2,6 +2,11 @@
 **/build/
 local.properties
 .env
+.env.*
+!.env.example
 private/
 *.keystore
+*.jks
+*.bundle
+*.bundle.sha256
 node_modules/

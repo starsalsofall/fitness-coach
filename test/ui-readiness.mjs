@@ -12,12 +12,10 @@ const results=[];let browser;
 async function installNative(page) {
   await page.addInitScript(()=>{
     window.auditNative={
-      calls:{testReminder:0},pending:[],requests:[],holdSnapshot:false,
+      calls:{testReminder:0,healthSnapshot:0},requests:[],
       notificationMessage:'测试：通知权限已允许',
       speech:{available:true,message:'测试：系统语音服务可用'},
-      reminder:{ok:true,message:'测试通知已交给系统，请在通知栏检查声音和振动'},
-      status:{apiVersion:'v2',configured:true,hasToken:true,tokenExpired:false,upstreamVerified:false,message:'测试：服务本地凭据已读取'},
-      statusError:null
+      reminder:{ok:true,message:'测试通知已交给系统，请在通知栏检查声音和振动'}
     };
     window.Android={
       read:()=>localStorage.getItem('daily-motion-v1')??'',
@@ -28,12 +26,10 @@ async function installNative(page) {
       speechStatus:()=>JSON.stringify(window.auditNative.speech),
       testReminder:()=>{window.auditNative.calls.testReminder++;return JSON.stringify(window.auditNative.reminder);},
       requestNotifications:()=>{},requestExactAlarms:()=>{},openNotificationSettings:()=>{},
+      healthSnapshot:()=>{window.auditNative.calls.healthSnapshot++;},
       api:(id,host,path,method)=>{
-        const request={id,host,path,method};window.auditNative.requests.push(request);
-        if(path.startsWith('/api/snapshot')&&window.auditNative.holdSnapshot){window.auditNative.pending.push(request);return;}
-        const failure=path==='/api/status'?window.auditNative.statusError:null;
-        const data=path==='/api/status'?window.auditNative.status:{records:[],syncedAt:new Date().toISOString()};
-        queueMicrotask(()=>window.nativeApiResult(id,!failure,failure?{error:failure}:data));
+        window.auditNative.requests.push({id,host,path,method});
+        queueMicrotask(()=>window.nativeApiResult(id,true,{records:[],syncedAt:new Date().toISOString()}));
       }
     };
   });
@@ -41,11 +37,6 @@ async function installNative(page) {
 async function navigate(page,tab) {
   await page.locator(`[data-tab=${tab}]`).click();
   await page.waitForFunction(value=>document.querySelector(`[data-tab="${value}"]`)?.classList.contains('active'),tab);
-}
-async function configureConnection(page) {
-  await page.locator('[name=serverUrl]').fill('https://audit-sync.example');
-  await page.locator('[name=pairToken]').fill('audit-test-pair-token');
-  await page.locator('#connection-form button[type=submit]').click();
 }
 async function stored(page) {return page.evaluate(()=>localStorage.getItem('daily-motion-v1'));}
 async function run(name,check,{native=false,initialize=null,route='#settings'}={}) {
@@ -87,42 +78,43 @@ try {
     assert.equal(await stored(page),before);
   },{native:true});
 
-  await run('returning from native settings preserves unsaved values, secret draft and focus',async page=>{
+  await run('returning from native settings preserves unsaved goals and input focus',async page=>{
     await page.locator('[name=calories]').fill('1850');await page.locator('[name=protein]').fill('115');
-    await page.locator('[name=serverUrl]').fill('https://unsaved-audit.example');await page.locator('[name=pairToken]').fill('unsaved-audit-secret');
     await page.evaluate(()=>{window.auditNative.notificationMessage='测试：已返回系统设置，通知仍允许';window.nativeStatusUpdated();});
     assert.equal(await page.locator('[name=calories]').inputValue(),'1850');assert.equal(await page.locator('[name=protein]').inputValue(),'115');
-    assert.equal(await page.locator('[name=serverUrl]').inputValue(),'https://unsaved-audit.example');assert.equal(await page.locator('[name=pairToken]').inputValue(),'unsaved-audit-secret');
-    assert.equal(await page.evaluate(()=>document.activeElement?.name),'pairToken');
+    assert.equal(await page.evaluate(()=>document.activeElement?.name),'protein');
     assert.match(await page.locator('#notification-status').innerText(),/已返回系统设置/);
-    assert.ok(!(await stored(page)).includes('unsaved-audit-secret'));
+    const persisted=JSON.parse(await stored(page));assert.equal(persisted.settings.calories,null);assert.equal(persisted.settings.protein,null);
   },{native:true});
 
-  await run('WHOOP sync completion keeps unsaved settings, connection drafts and text caret',async page=>{
-    await configureConnection(page);await page.evaluate(()=>{window.auditNative.holdSnapshot=true;});
-    await page.locator('[data-action=whoop-sync]').click();await page.waitForFunction(()=>window.auditNative.pending.length===1);
-    await page.locator('[name=calories]').fill('1850');await page.locator('[name=serverUrl]').fill('https://pending-draft.example');await page.locator('[name=pairToken]').fill('pending-secret-draft');
-    await page.locator('[name=pairToken]').evaluate(input=>input.setSelectionRange(4,9));
-    await page.evaluate(()=>{const request=window.auditNative.pending.shift();window.nativeApiResult(request.id,true,{records:[],syncedAt:new Date().toISOString()});});
-    await page.locator('[data-action=whoop-sync]:not([disabled])').waitFor();
-    assert.equal(await page.locator('[name=calories]').inputValue(),'1850');assert.equal(await page.locator('[name=serverUrl]').inputValue(),'https://pending-draft.example');
-    assert.equal(await page.locator('[name=pairToken]').inputValue(),'pending-secret-draft');
-    assert.deepEqual(await page.locator('[name=pairToken]').evaluate(input=>({focused:document.activeElement===input,start:input.selectionStart,end:input.selectionEnd})),{focused:true,start:4,end:9});
-    const persisted=JSON.parse(await stored(page));assert.equal(persisted.settings.serverUrl,'https://audit-sync.example');assert.equal(persisted.settings.calories,null);
-    assert.ok(!(await stored(page)).includes('pending-secret-draft'));
+  await run('unsaved goals survive navigation and a native status callback preserves journal text caret',async page=>{
+    await page.locator('[name=calories]').fill('1850');await page.locator('[name=protein]').fill('115');
+    await navigate(page,'trends');await page.locator('[name=note]').fill('unfinished-journal-audit');
+    await page.locator('[name=note]').evaluate(input=>input.setSelectionRange(4,9));
+    await page.evaluate(()=>window.nativeStatusUpdated());
+    assert.deepEqual(await page.locator('[name=note]').evaluate(input=>({focused:document.activeElement===input,start:input.selectionStart,end:input.selectionEnd})),{focused:true,start:4,end:9});
+    await navigate(page,'settings');assert.equal(await page.locator('[name=calories]').inputValue(),'1850');assert.equal(await page.locator('[name=protein]').inputValue(),'115');
+    assert.equal(JSON.parse(await stored(page)).settings.calories,null);assert.ok(!(await stored(page)).includes('unfinished-journal-audit'));
+    await navigate(page,'trends');assert.equal(await page.locator('[name=note]').inputValue(),'unfinished-journal-audit');
   },{native:true});
 
-  await run('connection status distinguishes local credentials, expiration and invalid pairing',async page=>{
-    await configureConnection(page);await page.locator('[name=calories]').fill('1850');
-    await page.locator('[data-action=whoop-check]').click();
-    await page.waitForFunction(()=>document.querySelector('#whoop-check-result')?.textContent.includes('服务本地凭据已读取'));
-    assert.match(await page.locator('#whoop-check-result').innerText(),/本地凭据不等于上游授权仍有效/);assert.equal(await page.locator('[name=calories]').inputValue(),'1850');
-    await page.evaluate(()=>{window.auditNative.status={apiVersion:'v2',configured:true,hasToken:true,tokenExpired:true,upstreamVerified:false,message:'测试：访问令牌已过期，同步时尝试刷新'};});
-    await page.locator('[data-action=whoop-check]').click();await page.waitForFunction(()=>document.querySelector('#whoop-check-result')?.textContent.includes('令牌已过期'));
-    await page.evaluate(()=>{window.auditNative.statusError='测试：个人连接密钥无效，请重新配置';});
-    await page.locator('[data-action=whoop-check]').click();await page.waitForFunction(()=>document.querySelector('#whoop-check-result')?.textContent.includes('连接密钥无效'));
-    assert.equal(await page.locator('[name=calories]').inputValue(),'1850');assert.equal(await page.evaluate(()=>window.auditNative.requests.filter(r=>r.path==='/api/status').length),3);
-  },{native:true});
+  await run('paused sync makes no native requests and preserves existing WHOOP and Health Connect caches',async page=>{
+    const before=JSON.parse(await stored(page));assert.equal(before.settings.serverUrl,'https://legacy-sync.example');
+    assert.match(await page.locator('#sync-paused').innerText(),/WHOOP 同步已暂停/);
+    assert.equal(await page.locator('#connection-form,[name=serverUrl],[name=pairToken],[data-action^="whoop-"],[data-action^="health-"]').count(),0);
+    for(const tab of ['today','training','food','trends','settings'])await navigate(page,tab);
+    await page.clock.fastForward(16*60*1000);
+    assert.equal(await page.evaluate(()=>window.auditNative.requests.length),0);
+    assert.equal(await page.evaluate(()=>window.auditNative.calls.healthSnapshot),0);
+    const after=JSON.parse(await stored(page));assert.deepEqual(after.whoop,before.whoop);assert.deepEqual(after.healthConnect,before.healthConnect);
+    assert.equal(after.settings.serverUrl,before.settings.serverUrl);
+  },{native:true,initialize:async page=>{
+    await page.clock.install();
+    const state=initialState();state.settings.serverUrl='https://legacy-sync.example';
+    state.whoop={records:[{date:'2026-11-07',score:75,sleepHours:7,source:'whoop',workouts:[]}],syncedAt:'2026-11-07T01:00:00Z'};
+    state.healthConnect={records:[{date:'2026-11-07',score:null,sleepHours:6.5,source:'health-connect',workouts:[]}],syncedAt:'2026-11-07T01:30:00Z',source:'health-connect',sourcePackage:'com.whoop.android'};
+    await page.addInitScript(data=>{localStorage.setItem('daily-motion-v1',JSON.stringify(data));sessionStorage.setItem('motion-pair-token','legacy-audit-token');},state);
+  }});
 
   await run('journal drafts remain separate by date and save only the selected day',async page=>{
     await navigate(page,'trends');const today=await page.locator('#day').inputValue(),previous=offsetDate(today,-1);
@@ -140,11 +132,13 @@ try {
   await run('successful save clears the saved draft while backup restore clears all drafts',async page=>{
     await page.locator('[name=calories]').fill('1850');await page.locator('#settings-form button[type=submit]').click();
     assert.equal(JSON.parse(await stored(page)).settings.calories,1850);
-    await page.locator('[name=calories]').fill('1950');await page.locator('[name=serverUrl]').fill('https://unsaved-restore.example');await page.locator('[name=pairToken]').fill('unsaved-restore-secret');
-    const backup=JSON.parse(await stored(page));backup.settings.calories=1700;
+    await page.locator('[name=calories]').fill('1950');await page.locator('[name=protein]').fill('115');
+    await navigate(page,'trends');await page.locator('[name=note]').fill('unsaved-restore-journal');await navigate(page,'settings');
+    const backup=JSON.parse(await stored(page));backup.settings.calories=1700;backup.settings.protein=100;
     await page.evaluate(raw=>window.restoreBackup(raw),JSON.stringify(backup));
-    assert.equal(await page.locator('[name=calories]').inputValue(),'1700');assert.equal(await page.locator('[name=serverUrl]').inputValue(),'');assert.equal(await page.locator('[name=pairToken]').inputValue(),'');
+    assert.equal(await page.locator('[name=calories]').inputValue(),'1700');assert.equal(await page.locator('[name=protein]').inputValue(),'100');
     await page.evaluate(()=>window.nativeStatusUpdated());assert.equal(await page.locator('[name=calories]').inputValue(),'1700');
+    await navigate(page,'trends');assert.equal(await page.locator('[name=note]').inputValue(),'');
   });
 
   await run('older WebView feature simulation starts plans and supports fallback dialogs and reuse',async page=>{

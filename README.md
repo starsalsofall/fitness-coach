@@ -2,24 +2,24 @@
 
 找不到上次聊天记录时，先看 [当前进度与继续步骤](PROJECT-STATUS.md)。电脑预览可双击 `start-preview.cmd` 启动，再打开 <http://127.0.0.1:8787>。
 
-第一版个人测试 APK、源码与可运行交互预览。中文、本地优先、无应用注册。已按你确认的“减脂，同时保持肌肉”设置默认目标；热量和蛋白质数值留待个人设置。项目参考与功能取舍见 [RESEARCH.md](RESEARCH.md)。
+给本人使用的中文、本地优先应用，无需注册应用账号。默认目标为“减脂，同时保持肌肉”，具体热量和蛋白质数值由本人设置。设备已确认是华为 Mate 60 Pro、HarmonyOS 4.2.0.198，继续使用安卓 APK。用户已试用上一版，本轮根据反馈补充整周计划导入与更新流程。
 
-本轮复审已按“华为 Mate 60 Pro、少录入、强提醒”更新，先看 [第一版开发要求](V1-REQUIREMENTS.md)、[审查与改进](APP-REVIEW.md)、[WHOOP 同步方案](WHOOP-SYNC.md) 和 [完整项目目录](PROJECT-TREE.md)。2026-11-08 已确认系统为 HarmonyOS 4.2.0.198，继续交付安卓 APK；实际安装和系统能力需要真机验收。
+当前版本 0.2.0，版本码 3；安装包路径为 `artifacts/daily-motion-0.2.0-debug.apk`。本轮最终构建、签名和测试结果见 [VALIDATION.md](VALIDATION.md)，手机新增功能、系统语音及后台提醒仍需本人验收。安装见 [INSTALL-ANDROID.md](INSTALL-ANDROID.md)，更新方式见 [UPDATE.md](UPDATE.md)，变化见 [CHANGELOG.md](CHANGELOG.md)。
 
 ## 当前能用什么
 
-- 今日计划、每周重复安排、分类打卡、跳过原因、力量训练组数和重量、实际时长、休息计时。
-- 常吃食物与份量换算、最近饮食一键复用、复制昨天饮食、热量/蛋白质汇总和全天完整性检查。
-- 系统中文语音入口、文字草稿食物匹配与份量确认；未知项可存待补全备注，不猜热量。系统语音识别需真机验证，浏览器可用输入法语音或文字。
-- 近 7 天回顾、体重和感受记录、JSON 备份恢复。
-- 安卓强提醒源码：高优先声音/振动、有限次复提醒、稍后提醒、夜间静默、重启恢复、精准权限/降级和完成后停止。
-- WHOOP 官方 v2 API 服务端模块和客户端配置入口；需要自建 HTTPS 服务与本人授权。
-- 支持设备可选原生 Health Connect，只读 WHOOP 睡眠与运动；本机桥需 Android 14+ 系统服务，华为不默认支持。
-- 0.1.1 加入安装自检与 WHOOP 本地连接检查，保留未保存输入和焦点，并补充旧 WebView 的轻量兼容。
+- 一次粘贴整周文字计划，预览按星期和运动项目拆分的结果，再统一导入；可选每周重复或仅安排所选一周。
+- 每天每项运动独立勾选完成、撤销或记录跳过原因；组数、重量、实际时长为选填。可查看未来安排，未来日期不能提前勾完成。
+- 每周重复计划会补入已浏览过的未来日期；仅该周导入只影响所选周。导入保留已有打卡、饮食和历史记录，并跳过相同项目。
+- 常吃食物、常用份量、最近饮食一键复用、复制昨天饮食，以及热量和蛋白质汇总。
+- 系统中文语音入口、文字匹配食物与份量确认；未知食物留待补全，不猜热量。系统语音需真机验证，浏览器可用输入法语音或文字。
+- 首页结合当天已记录摄入、自设目标及前两天的训练勾选给出提醒；饮食未记全时显示记录进度，不判断全天摄入不足。
+- 原生强提醒文案显示具体待完成项目和当天饮食进度，保留声音/振动、有限次复提醒、稍后提醒、夜间静默、重启恢复和完成后停止。
+- 安装自检、近 7 天回顾、体重与感受、JSON 备份恢复，以及未保存输入和旧 WebView 兼容处理。
 
-2026-11-08 已完成 APK 构建、签名与包内资源校验；安装包为 `artifacts/daily-motion-0.1.1-debug.apk`，使用方法见 [INSTALL-ANDROID.md](INSTALL-ANDROID.md)。0.1.1 可覆盖 0.1.0，变化见 [CHANGELOG.md](CHANGELOG.md)。安卓 lint 通过，仍有少量已审查的警告；这不替代华为真机验收。
+WHOOP 和 Health Connect 同步已按本轮要求暂停，界面没有授权、连接或同步入口，也不自动请求数据。原模块和已有缓存保留，当前使用本机记录。无需创建 WHOOP 开发者应用或部署同步服务。
 
-尚未连接真实 WHOOP 账号。浏览器预览不提供关闭页面后的原生提醒。WHOOP 目前仅在应用打开、前台每 15 分钟以及手动点击时同步；后台全天推送、拍照识别、条码库尚未实现。
+项目参考与功能取舍见 [RESEARCH.md](RESEARCH.md)、[第一版开发要求](V1-REQUIREMENTS.md)、[审查与改进](APP-REVIEW.md) 和 [完整项目目录](PROJECT-TREE.md)。浏览器预览不能提供关闭页面后的手机系统提醒；拍照识别、条码库、应用内在线更新和远程热更新尚未实现。
 
 ## 立即预览
 
@@ -29,62 +29,60 @@
 node server.mjs
 ```
 
-在电脑打开 <http://127.0.0.1:8787>，可调整浏览器到手机尺寸。首次使用先在“训练”添加项目，在“饮食”创建常吃食物，在“设置”填个人目标。数据保存在当前浏览器，不与安卓数据自动互通，可使用 JSON 备份转移。
+在电脑打开 <http://127.0.0.1:8787>，可调整浏览器到手机尺寸。首次使用先到“训练”导入整周计划，在“饮食”创建常吃食物，在“设置”填个人目标。浏览器与安卓的数据不自动互通，可用 JSON 备份转移。
 
-预览默认只监听本机，不自动部署到公网。手机安装需要下文的 APK 构建流程。
+预览默认只监听本机，不自动部署到公网。手机安装请使用 APK。
 
-## 构建安卓 APK
+## 导入一周计划
 
-项目在 `android/`，使用 Android 平台 Java API 与打包在 APK 内的本地界面，无远程页面、无需第三方运行时 UI 库。最低 Android 8.0；需要较新的 Android System WebView（支持 ES modules、structuredClone、dialog）。
+在“训练”选择整周计划导入，将聊天或备忘录中的文字粘贴进去。支持“周一 / 星期一”等分组及 Markdown 项目列表。每天每个动作单独一行最容易确认；组数与次数保留为项目说明，不会当成分钟数。
 
-构建要求：JDK 17、Android SDK Platform 35、Build Tools 35.0.0，以及 Gradle 8.11.1。版本依据 [AGP 8.10 官方兼容表](https://developer.android.com/build/releases/agp-8-10-0-release-notes)，项目使用 AGP 8.10.1。
+下面仅演示格式，不代表建议采用这组训练：
 
-1. 安装 Android Studio 和所需 SDK，并设置 `JAVA_HOME`、`ANDROID_HOME`（或在 `android/local.properties` 配置 `sdk.dir`）。
-2. 项目已附固定 SHA-256 的 Gradle wrapper，可在项目根目录执行 `android\gradlew.bat -p android assembleDebug`。
-3. 或在项目根目录运行下面脚本；它发现现有 JDK / SDK / Gradle，复用本项目 `private/tooling/` 的便携工具，并保持测试签名、缓存和 Android 偏好目录都位于项目内：
+```text
+周一
+- 卧推 3组×10次
+- 快走 20分钟
+周二
+- 休息
+```
+
+选择起始周和“每周重复”或“仅该周”，先预览每一天拆出的项目，修正没有识别的内容，再确认导入。导入不会代替本人确认动作完成；当天打开后逐项勾选即可。
+
+## 构建与以后更新
+
+项目在 `android/`，使用 Android 平台 Java API 与 APK 内的本地界面，无远程页面、无需第三方运行时 UI 库。最低 Android 8.0；界面仍需要支持 ES modules 等语法的较新 WebView，缺少 structuredClone 和 dialog 方法已有轻量回退。
+
+构建要求：JDK 17、Android SDK Platform 35、Build Tools 35.0.0、Gradle 8.11.1。项目使用 AGP 8.10.1，兼容关系见 [AGP 8.10 官方兼容表](https://developer.android.com/build/releases/agp-8-10-0-release-notes)。
+
+1. 配置 JDK / SDK，或复用项目 `private/tooling/` 的便携工具；SDK 也可在 `android/local.properties` 指定。
+2. 在项目根目录运行构建脚本：
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File .\build-android.ps1
 ```
 
-产物：`android/app/build/outputs/apk/debug/app-debug.apk`。这是个人测试包，需在手机允许对应文件来源安装。后续更新要沿用 `private/signing/personal-debug.keystore`，不要覆盖或分享该私有文件；正式发布签名暂未配置。首次构建脚本仅在密钥缺失时创建，不轮换现有密钥。
+也可使用带固定校验值的 wrapper：`android\gradlew.bat -p android assembleDebug`。产物为 `android/app/build/outputs/apk/debug/app-debug.apk`。
 
-仓库另附 `.github/workflows/android.yml`，将完整项目放到你自己的 GitHub 仓库后可以手动触发构建并下载 APK artifact；本次未上传或运行 GitHub Actions。
+日后继续修改同一个项目，用 [make-update.ps1](make-update.ps1) 准备更新包，具体参数与步骤见 [UPDATE.md](UPDATE.md)。版本号递增、应用标识和签名一致时，打开新版 APK 按系统提示覆盖更新即可，训练与饮食记录留在原应用中，无需重做一个软件。目前需要本人手动下载或接收更新包、确认系统安装，尚无应用内在线更新或远程热更新。
+
+测试签名保存在 `private/signing/personal-debug.keystore`，首次构建脚本仅在密钥缺失时创建，不轮换现有密钥。请保留这份私有文件，不覆盖或放进分享包。当前是个人测试包，正式发布签名暂未配置。
+
+另有 `.github/workflows/android.yml` 可在自己的 GitHub 仓库手动构建；本次未上传或运行。普通 CI 默认生成的测试签名可能与本机不同；保持覆盖更新前应核对签名，不能用不同签名的包直接替换现有应用。
 
 ## 安卓使用与提醒
 
-“设置”启用提醒并保存，Android 13+ 允许通知，可选授权精准提醒。每日训练与饮食检查默认 18:30/20:30，每类每天最多 3 次（含首次）、未完成后间隔 30 分钟复提醒，默认 22:30–07:00 静默。检查时间需要在静默时段外。通知支持打开记录和稍后提醒，完成后停止；无训练安排不催练。动作计划时间目前仅展示，不是每项独立闹钟。
+在“设置”启用提醒并保存，允许系统通知，可选授权精准提醒。每日训练与饮食检查默认 18:30 / 20:30，每类每天最多 3 次（含首次）、未完成后间隔 30 分钟，默认 22:30–07:00 静默。检查时间需要在静默时段外。动作计划时间目前仅展示，不是每项独立闹钟。
+
+通知会参考今日待确认项目、当天已记录热量和蛋白质，以及前两天训练勾选。记录缺失时不当作漏练，不按设备消耗自动增加饮食目标，不要求加练抵消饮食。训练完成或明确跳过后停止相应提醒；饮食记全且没有待补全备注后停止饮食提醒。
 
 原生提醒不依赖 WebView 持续打开。手机省电、勿扰和权限可能阻止或延迟提醒，系统强行停止后需重新打开。华为须检查应用启动管理与后台活动；详细真机验收见 [REMINDERS_TEST_PLAN.md](android/REMINDERS_TEST_PLAN.md)。
 
-所有训练和饮食记录保存在应用私有 SharedPreferences JSON；连接密钥存于另一份私有偏好。Android 系统云备份已关闭，没有分析 SDK。当前没有额外的数据库加密或生物识别锁。可在系统文件选择器导出/恢复 JSON；健康记录备份本身不加密，请自行保管。
+训练和饮食保存在应用私有 SharedPreferences JSON。Android 系统云备份关闭，没有分析 SDK，当前没有额外数据库加密或生物识别锁。可用系统文件选择器导出/恢复 JSON；备份含健康记录且不加密，请自行保管。卸载或清除数据会移除本机记录，更新前可先导出备份。
 
-## 配置真实 WHOOP 连接
+## WHOOP 技术资料（暂停）
 
-不需要把密码或 Client Secret 发给聊天，也不要写进 APK。
-
-Windows 本机可使用 [setup-whoop.ps1](setup-whoop.ps1) 首次配置向导；已有 `.env` 或加密令牌会被保留。极简流程见 [WHOOP-SETUP.md](WHOOP-SETUP.md)。这只准备本地配置，不代替 HTTPS 部署和本人授权。
-
-1. 在 [WHOOP Developer Dashboard](https://developer-dashboard.whoop.com/) 创建应用，开启 `read:recovery`、`read:sleep`、`read:workout`。授权请求另外包含 `offline` 以获取刷新令牌。
-2. 将 `.env.example` 复制为 `.env`，在你控制的服务器上填写 Client ID / Client Secret，以及已在 WHOOP 注册的完整回调地址，例如 `https://your-domain/oauth/callback`。
-3. 分别生成两个不同的随机值，填写 `TOKEN_ENCRYPTION_KEY` 与 `PAIR_TOKEN`：
-
-```powershell
-node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
-```
-
-4. 使用有持久化磁盘的 Node.js 服务，通过可信 HTTPS 反向代理暴露，保持 `.env` 和 `private/` 不被静态托管。服务默认仅监听 127.0.0.1。不要将预览服务器直接以 HTTP 暴露到公网。
-5. 在手机“设置 → WHOOP 同步”填写 HTTPS 服务根地址和 `PAIR_TOKEN`，保存。点击“前往 WHOOP 授权”，在系统浏览器完成授权，返回应用点“立即同步”。
-
-只读数据在后端获取，令牌使用 AES-256-GCM 加密保存在 `private/whoop-token.enc`，刷新请求串行处理并保存新令牌。授权 state 单次使用、10 分钟有效；同步接口需要 Bearer 连接密钥。服务不保存训练或饮食记录。连接密钥应视为敏感信息；浏览器预览只放在当前会话 sessionStorage，安卓放在私有偏好。
-
-跨域浏览器预览时，将 `APP_ORIGIN` 配为精确的页面 HTTPS origin；不使用通配 CORS。安卓由原生 HTTPS 请求，不受浏览器跨域约束。生产部署仍需配置访问控制、代理日志过滤、进程自启动和备份；当前服务面向单人、单进程使用。
-
-同步范围是最近约 31 天，恢复数据按主睡眠结束的手机当地日期归档，小睡不替换主睡眠；跨午夜运动按开始日归档。同步得到新快照会替换本机 WHOOP 缓存，超过范围的 WHOOP 记录不长期留存，手动训练和饮食历史保留。删除/更正 WHOOP 记录以新的查询快照为准。已有手动身体状态优先展示，清空手动两项即可使用同步数据。
-
-华为的第一版优先使用上面的官方云接口，不要求 GMS。其他具备 Android 14+ Health Connect 服务的设备，可用本机共享省去同步服务；没有服务会明确回退。Health Connect 不提供 WHOOP 专有恢复分数的保证，只有运动和睡眠已接入。两条通道的数据分开缓存、不重复叠加。详见 [WHOOP-SYNC.md](WHOOP-SYNC.md)。
-
-“断开并清除缓存”会先撤销服务端 WHOOP 授权，删除服务端令牌，再清除本机 WHOOP 缓存和连接配置；若服务端不可达会明确失败，可稍后重试。应用不是 WHOOP 设备的秒级心率监控器。
+现有服务端、配置向导和健康数据模块保留供后续扩展；本轮不继续开通、部署或验收真实同步，也不列为使用前提。此前方案见 [WHOOP-SYNC.md](WHOOP-SYNC.md) 与 [WHOOP-SETUP.md](WHOOP-SETUP.md)，其中连接操作不适用于当前已暂停同步的界面。原缓存未删除，不代表新版本正在持续获取数据。
 
 ## 验证
 
@@ -94,20 +92,19 @@ npm ci
 node test/ui-smoke.mjs
 node test/ui-audit.mjs
 node test/ui-readiness.mjs
-node test/verify-apk.mjs
+node test/verify-apk.mjs artifacts/daily-motion-0.2.0-debug.apk
 ```
 
-手机交互测试通过开发依赖 playwright-core 使用已安装的 Chrome，不下载浏览器。默认路径为 `C:\Program Files\Google\Chrome\Application\chrome.exe`，可通过 `CHROME_PATH` 改路径。测试使用临时浏览器上下文，不使用你的日常浏览器数据。截图保存在 `artifacts/`；测试食物数值仅供交互验证，不是营养建议。
+最终检查项目和计数以 [VALIDATION.md](VALIDATION.md) 为准。手机尺寸测试通过开发依赖 playwright-core 使用已安装 Chrome，不下载浏览器；默认 `C:\Program Files\Google\Chrome\Application\chrome.exe`，可用 `CHROME_PATH` 改路径。测试使用隔离上下文，不读日常浏览器数据；测试食物数值仅供交互验证。
 
-安卓真机验收还需要：允许/拒绝通知、锁屏提醒、跨日、重启恢复、强行停止后重新打开、文件备份恢复、离线记录、真实 WHOOP 授权/刷新/撤销。本机编译、签名与静态检查已通过；不能用它们替代这些手机上的检查。
+真机仍需验证：覆盖安装后保留记录、整周计划导入与逐项勾选、系统中文语音、通知允许/拒绝、锁屏后台、跨日、重启、静默、强行停止后重新打开及文件备份恢复。浏览器模拟、本机编译和签名校验不能替代这些结果。
 
 ## 目录
 
-- `web/`：共享交互界面与业务逻辑。
-- `android/`：本地资源 WebView、私有存储、系统文件选择器、HTTPS 桥和提醒。
-- `server.mjs`、`whoop.mjs`：本机预览与可选 WHOOP 服务端。
-- `test/`：业务、接口授权、令牌、分页和手机尺寸交互检查。
+- `web/`：共享交互界面、计划导入、饮食与本地反馈规则。
+- `android/`：本地 WebView、私有存储、系统文件选择器、语音与提醒。
+- `server.mjs`、`whoop.mjs`：本机预览与已暂停使用的可选同步模块。
+- `test/`：业务、保留模块及手机尺寸交互检查。
+- `make-update.ps1`、`UPDATE.md`：同一项目的后续更新流程。
 
-完整目录树、模块责任和发布包排除项见 [PROJECT-TREE.md](PROJECT-TREE.md)。
-
-本项目没有复制调研项目的代码或素材。后续如直接合并开源实现，需按对应项目及其资源的许可处理。
+完整目录、模块责任和发布包排除项见 [PROJECT-TREE.md](PROJECT-TREE.md)。本项目没有复制调研项目代码或素材；后续直接合并开源实现时需按对应许可处理。

@@ -13,10 +13,19 @@ const expectedVersion=JSON.parse(await readFile('package.json','utf8')).version;
 function run(executable,args){const r=spawnSync(executable,args,{encoding:'utf8',windowsHide:true});if(r.status!==0)throw Error(r.stderr||r.stdout||r.error?.message||'Tool failed');return r.stdout;}
 const signature=run(join(jdk,'bin','java.exe'),['-jar',join(sdk,'build-tools/35.0.0/lib/apksigner.jar'),'verify','--verbose','--print-certs','--min-sdk-version','26',apk]);
 assert.match(signature,/Verifies/);assert.match(signature,/Verified using v2 scheme.*true/);
+const identity=JSON.parse(await readFile('android/update-identity.json','utf8'));
+assert.equal(signature.match(/certificate SHA-256 digest: (\w+)/)?.[1],identity.certificateSha256,'Signer changed; this APK cannot update the installed personal app');
 const badging=run(join(sdk,'build-tools/35.0.0/aapt.exe'),['dump','badging',apk]);
 assert.match(badging,/package: name='local\.dailymotion'/);assert.match(badging,/sdkVersion:'26'/);assert.match(badging,/targetSdkVersion:'35'/);assert.match(badging,/application-label:'每日动一动'/);
 const actualVersion=badging.match(/versionName='([^']+)'/)?.[1],versionCode=Number(badging.match(/versionCode='(\d+)'/)?.[1]);
 assert.equal(actualVersion,expectedVersion,'APK version differs from current project');assert.ok(Number.isInteger(versionCode)&&versionCode>0);
+assert.ok(versionCode>=identity.minimumVersionCode,'Android version code went backwards');
+for(const reportName of (await readdir('artifacts')).filter(name=>/^apk-verification-\d+\.\d+\.\d+\.json$/.test(name))){
+  const prior=JSON.parse(await readFile(join('artifacts',reportName),'utf8'));if(prior.version===actualVersion)continue;
+  // The first report format omitted versionCode. Read it from that actual APK before comparing.
+  const priorCode=Number.isInteger(prior.versionCode)?prior.versionCode:Number(run(join(sdk,'build-tools/35.0.0/aapt.exe'),['dump','badging',prior.apk]).match(/versionCode='(\d+)'/)?.[1]);
+  assert.ok(Number.isInteger(priorCode)&&versionCode>priorCode,'A new release must increase Android versionCode above every earlier APK');
+}
 const data=await readFile(apk);let end=-1;
 for(let i=data.length-22;i>=Math.max(0,data.length-65557);i--)if(data.readUInt32LE(i)===0x06054b50){end=i;break;}
 assert.notEqual(end,-1,'APK ZIP directory missing');const count=data.readUInt16LE(end+10),entries=new Map();let pos=data.readUInt32LE(end+16);

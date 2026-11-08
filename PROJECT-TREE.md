@@ -35,27 +35,35 @@ fitness-coach/
 │   ├── gradlew
 │   ├── gradlew.bat
 │   ├── REMINDERS_TEST_PLAN.md
-│   └── settings.gradle
+│   ├── settings.gradle
+│   └── update-identity.json
 ├── test/
+│   ├── coaching.test.mjs
 │   ├── core.test.mjs
 │   ├── quick-log.test.mjs
 │   ├── ui-audit.mjs
 │   ├── ui-readiness.mjs
 │   ├── ui-smoke.mjs
+│   ├── ui-weekly.mjs
 │   ├── verify-apk.mjs
+│   ├── weekly-plan.test.mjs
 │   └── whoop.test.mjs
 ├── web/
 │   ├── app.js
+│   ├── coaching.js
 │   ├── core.js
 │   ├── index.html
 │   ├── quick-log.js
-│   └── style.css
+│   ├── style.css
+│   └── weekly-plan.js
 ├── .env.example
 ├── .gitignore
+├── AGENTS.md
 ├── APP-REVIEW.md
 ├── build-android.ps1
 ├── CHANGELOG.md
 ├── INSTALL-ANDROID.md
+├── make-update.ps1
 ├── package-lock.json
 ├── package-source.ps1
 ├── package.json
@@ -66,8 +74,10 @@ fitness-coach/
 ├── server.mjs
 ├── setup-whoop.ps1
 ├── start-preview.cmd
+├── UPDATE.md
 ├── V1-REQUIREMENTS.md
 ├── VALIDATION.md
+├── WEEKLY-PLAN.md
 ├── WHOOP-SETUP.md
 ├── WHOOP-SYNC.md
 └── whoop.mjs
@@ -77,19 +87,24 @@ fitness-coach/
 
 | 路径 | 责任 |
 | --- | --- |
-| web/app.js | 页面、打卡、饮食确认、语音草稿、同步入口、备份与失败提示 |
+| web/app.js | 页面、打卡、饮食确认、语音草稿、整周导入界面、备份与失败提示；同步暂停 |
 | web/core.js | 日期、计划快照、汇总、目标反馈、来源选择和备份校验 |
+| web/weekly-plan.js | 整周文字解析、分项、单周/重复导入、生效日期、去重及历史保留 |
+| web/coaching.js | 今日饮食与前两天实际训练勾选的只读反馈 |
 | web/quick-log.js | 最近饮食复用、文字中的食物/份量匹配、静默时间判断；不调用云模型 |
 | android/.../MainActivity.java | 打包本地界面、私有存储、系统文件/语音/设置入口、HTTPS桥 |
 | android/.../ReminderReceiver.java | 每日检查、次数上限、复提醒、稍后提醒、静默与完成状态 |
 | android/.../BootReceiver.java | 重启、时区和精准权限变化后恢复安排 |
-| android/.../HealthConnectBridge.java | 支持设备的可选HealthConnect只读桥，非华为默认依赖 |
+| android/.../HealthConnectBridge.java | 保留的可选 Health Connect 桥，当前同步暂停 |
 | android/.../HealthPermissionsActivity.java | 本机健康权限的中文用途说明 |
-| server.mjs | 本机预览、个人同步接口鉴权和回调 |
-| whoop.mjs | 官方OAuth、令牌刷新/加密、分页与数据转换 |
+| server.mjs | 本机预览；保留的个人同步接口当前不由客户端调用 |
+| whoop.mjs | 暂停接入的官方 OAuth、令牌刷新/加密与数据转换模块 |
 | test/ | 业务、接口和手机尺寸交互回归 |
 | V1-REQUIREMENTS.md | 一期功能、取舍、设备前提和交付验收 |
-| WHOOP-SYNC.md | 华为同步路线、官方能力、现有实现与真实验收区别 |
+| WHOOP-SYNC.md | 原同步技术资料，当前阶段暂停 |
+| WEEKLY-PLAN.md | 聊天/备忘录整周导入格式与使用范围 |
+| UPDATE.md、make-update.ps1 | 同应用同签名版本迭代与更新包生成 |
+| android/update-identity.json | 公开证书指纹与最低版本码，不含私钥 |
 | APP-REVIEW.md | 本轮查出的问题、修复和未完成项 |
 | android/REMINDERS_TEST_PLAN.md | 华为原生提醒与语音真机验收 |
 

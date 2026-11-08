@@ -1,3 +1,4 @@
+param([switch]$Check)
 $ErrorActionPreference = 'Stop'
 $projectRoot = $PSScriptRoot
 $toolRoot = Join-Path $projectRoot 'private/tooling'
@@ -171,7 +172,11 @@ try {
     }
     Write-Host 'Building a personal test APK. Keep private/signing/personal-debug.keystore for future updates.'
     Push-Location $androidRoot
-    try { Invoke-NativeChecked -Executable $gradleExe -Arguments (@('--no-daemon') + $proxyArguments + @('assembleDebug')) -FailureMessage 'Android APK build failed.' }
+    try {
+        $buildTasks = @('assembleDebug')
+        if ($Check) { $buildTasks += 'lintDebug' }
+        Invoke-NativeChecked -Executable $gradleExe -Arguments (@('--no-daemon') + $proxyArguments + $buildTasks) -FailureMessage 'Android APK build failed.'
+    }
     finally { Pop-Location }
 }
 finally {

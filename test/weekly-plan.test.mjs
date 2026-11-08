@@ -25,6 +25,11 @@ test('Markdown chat tables preserve one project per row and accept Chinese time 
   assert.deepEqual(result.errors,[]);assert.equal(result.items.length,2);assert.equal(result.items[0].name,'深蹲');assert.equal(result.items[0].time,'18:30');assert.equal(result.items[1].minutes,20);
   assert.match(parseWeeklyPlan('周一 周三：深蹲3组').errors.join(''),/多个星期用顿号/);
 });
+test('Markdown emphasis and muscle group headings do not produce extra check-in tasks or discard rest',()=>{
+  const parsed=parseWeeklyPlan('**周一：胸+肩**\n1. **卧推** 4×10\n2. 侧平举 3×12\n__周二（背部训练）__\n1. 划船 4×10\n周三：休息\n周四：腿臀\n腿举 3×12\n周五：核心\n平板支撑3组×30秒');
+  assert.deepEqual(parsed.errors,[]);assert.deepEqual(parsed.items.map(item=>item.name),['卧推','侧平举','划船','休息','腿举','平板支撑']);assert.equal(parsed.items[3].category,'休息');assert.equal(parsed.items[0].instructions,'4×10');assert.equal(parsed.warnings.filter(value=>value.includes('肌群分组')).length,4);
+  const exercise=parseWeeklyPlan('周一\n胸推 3组×10次\n肩推 3组×12次\n周二\n休息日');assert.deepEqual(exercise.errors,[]);assert.equal(exercise.items.length,3);
+});
 test('per-set time stays an instruction and is never converted into total exercise minutes',()=>{
   const result=parseWeeklyPlan('周一\n平板支撑 3组×2分钟\n深蹲 4组×10次');assert.deepEqual(result.errors,[]);assert.equal(result.items[0].minutes,0);assert.equal(result.items[0].instructions,'3组×2分钟');
 });
@@ -39,6 +44,17 @@ test('repeating import is idempotent and updates only selected week today onward
   const items=parseWeeklyPlan('周一、三：深蹲3组×8次\n周五：快走20分钟').items;
   const first=applyWeeklyPlan(state,items,{startDate:monday,today:'2026-11-11',repeat:true});assert.equal(first.added,2);assert.equal(state.plans.length,3);assert.equal(JSON.stringify(state.days['2026-11-09']),historical);assert.equal(state.plans[0].startDate,monday);
   const second=applyWeeklyPlan(state,items,{startDate:monday,today:'2026-11-11',repeat:true});assert.equal(second.added,0);assert.equal(second.duplicates,2);assert.equal(state.plans.length,3);assert.equal(ensureDay(state,'2026-11-16').tasks.length,1);
+});
+test('repeating imports fill already previewed future dates while preserving their records',()=>{
+  const state=initialState(),future=ensureDay(state,'2026-11-23');future.tasks=[{id:'existing',name:'快走',category:'有氧',time:'18:30',minutes:20,status:'done',sets:[],actualMinutes:21}];future.meals=[{id:'meal',name:'午饭',meal:'午餐',grams:100,calories:500,protein:30}];future.foodComplete=true;
+  ensureDay(state,'2026-11-02');const history=JSON.stringify(state.days['2026-11-02']);const items=parseWeeklyPlan('周一：深蹲3组×8次').items;
+  const result=applyWeeklyPlan(state,items,{startDate:monday,today:monday,repeat:true});
+  assert.equal(result.added,2);assert.deepEqual(result.dates,[monday,'2026-11-23']);assert.equal(state.days['2026-11-23'].tasks.length,2);assert.equal(state.days['2026-11-23'].tasks[0].status,'done');assert.equal(state.days['2026-11-23'].meals[0].calories,500);assert.equal(state.days['2026-11-23'].foodComplete,true);assert.equal(JSON.stringify(state.days['2026-11-02']),history);assert.equal(state.days['2026-11-16'],undefined);
+  const second=applyWeeklyPlan(state,items,{startDate:monday,today:monday,repeat:true});assert.equal(second.added,0);assert.equal(second.duplicates,2);assert.equal(state.plans.length,1);assert.doesNotThrow(()=>validateState(state));
+});
+test('one-time imports do not alter future snapshots outside the selected week',()=>{
+  const state=initialState();ensureDay(state,'2026-11-23');const before=JSON.stringify(state.days['2026-11-23']);const items=parseWeeklyPlan('周一：深蹲3组×8次').items;
+  const result=applyWeeklyPlan(state,items,{startDate:monday,today:monday,repeat:false});assert.equal(result.added,1);assert.deepEqual(result.dates,[monday]);assert.equal(JSON.stringify(state.days['2026-11-23']),before);
 });
 test('invalid imports are atomic and a week must begin on Monday',()=>{
   const state=initialState(),before=JSON.stringify(state),items=parseWeeklyPlan('周一：深蹲3组').items;

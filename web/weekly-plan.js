@@ -49,6 +49,11 @@ function categoryOf(text){
   if(/有氧|快走|慢走|步行|散步|跑步|慢跑|骑行|单车|游泳|椭圆|跳绳|cardio|walk|run|cycl|swim/i.test(text))return '有氧';
   return '力量';
 }
+function isMuscleHeading(text){
+  const value=norm(text).replace(/^[（(]\s*|\s*[）)][:：]?$/g,'').replace(/[:：]$/,'').replace(/(?:训练日|训练|日)$/,'').trim();
+  // Recognize only lists of muscle groups, not exercise names such as 胸推、肩推 or 腿举.
+  return /^(?:胸(?:部|肌)?|背(?:部|肌)?|肩(?:部)?|腿(?:部)?|臀(?:部)?|腹(?:部|肌)?|核心|上肢|下肢|全身|手臂|二头(?:肌)?|三头(?:肌)?)(?:\s*(?:[+＋、/&和及]?)\s*(?:胸(?:部|肌)?|背(?:部|肌)?|肩(?:部)?|腿(?:部)?|臀(?:部)?|腹(?:部|肌)?|核心|上肢|下肢|全身|手臂|二头(?:肌)?|三头(?:肌)?))*$/.test(value);
+}
 function parseExercise(raw,days,lineNumber,errors){
   let text=norm(raw.replace(/^\s*(?:[-*•●]|\d+[.)、])\s*/,'')).replace(/(\d)：(?=\d)/g,'$1:');
   if(!text)return null;
@@ -81,6 +86,7 @@ export function parseWeeklyPlan(input){
   const lines=input.replace(/\r\n?/g,'\n').split('\n');
   for(let index=0;index<lines.length;index++){
     let line=lines[index].trim();if(!line)continue;
+    line=line.replace(/\*\*([^*]+)\*\*/g,'$1').replace(/__([^_]+)__/g,'$1');
     if(/^\|?[\s:|\-]+\|?$/.test(line)&&line.includes('|'))continue;
     if(line.includes('|'))line=line.replace(/^\|\s*|\s*\|$/g,'').replace(/\s*\|\s*/g,'\t');
     line=line.replace(/^#{1,6}\s*/,'').replace(/^\s*(?:[-*•●]|\d+[.)、])\s*/,'');
@@ -92,6 +98,7 @@ export function parseWeeklyPlan(input){
     if(!days){errors.push(`第 ${index+1} 行缺少星期，请先写“周一”等标题。`);continue;}
     // Do not quietly attach an unknown or malformed weekday to the preceding day.
     if(/^(?:周|星期|礼拜|Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday)\S*/i.test(line)){errors.push(`第 ${index+1} 行星期无法识别，请使用“周一”至“周日”，多个星期用顿号分隔。`);continue;}
+    if(isMuscleHeading(line)){warnings.push(`第 ${index+1} 行肌群分组“${line}”已略过，请确认该天的具体动作已列齐。`);continue;}
     if(/^[^\d;；\t]{1,16}[:：]$/.test(line)){warnings.push(`第 ${index+1} 行分组标题“${line}”已略过，请确认下方动作已列齐。`);continue;}
     // Tabs preserve pasted spreadsheet columns; semicolons divide separate exercises.
     for(const segment of line.replace(/\t+/g,' ').split(/[;；]/)){
@@ -118,7 +125,9 @@ export function applyWeeklyPlan(state,input,{startDate,repeat=false,today=dateKe
   if(!validDate(today)||typeof repeat!=='boolean'||!Array.isArray(input)||!input.length||input.length>200)throw Error('计划或导入设置无效。');
   const items=input.map(normalizeItem),next=cloneData(state),dates=[];let added=0,duplicates=0;
   if(!Array.isArray(next.plans)||!next.days||typeof next.days!=='object')throw Error('本地计划数据无效。');
-  const targets=Array.from({length:7},(_,i)=>offsetDate(startDate,i)).filter(day=>day>=today&&items.some(item=>item.weekdays.includes(new Date(`${day}T12:00:00`).getDay())));
+  const candidateDates=Array.from({length:7},(_,i)=>offsetDate(startDate,i));
+  if(repeat)candidateDates.push(...Object.keys(next.days).filter(day=>validDate(day)&&day>=startDate&&day>=today));
+  const targets=[...new Set(candidateDates)].filter(day=>day>=today&&items.some(item=>item.weekdays.includes(new Date(`${day}T12:00:00`).getDay()))).sort();
   // Snapshot old templates first, so new templates do not auto-add tasks during this import.
   for(const date of targets)ensureDay(next,date);
   const plans=new Map();

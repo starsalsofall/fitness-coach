@@ -144,15 +144,14 @@ try {
 
   await run('backup restoration clears imported server addresses and existing pairing secrets',async page=>{
     await navigate(page,'settings');
-    await page.locator('[name=serverUrl]').fill('https://original.example');
-    await page.locator('[name=pairToken]').fill('existing-personal-pair-secret');
-    await page.locator('#connection-form button[type=submit]').click();
+    // Credentials can remain from an older version even while the connection UI is paused.
+    await page.evaluate(()=>sessionStorage.setItem('motion-pair-token','existing-personal-pair-secret'));
     assert.equal(await page.evaluate(()=>sessionStorage.getItem('motion-pair-token')),'existing-personal-pair-secret');
     const backup=await stored(page);backup.settings.serverUrl='https://backup-import.example';
     await page.evaluate(raw=>window.restoreBackup(raw),JSON.stringify(backup));
     assert.equal((await stored(page)).settings.serverUrl,'');
     assert.equal(await page.evaluate(()=>sessionStorage.getItem('motion-pair-token')),null);
-    assert.equal(await page.locator('[name=serverUrl]').inputValue(),'');
+    assert.equal(await page.locator('[name=serverUrl]').count(),0);
   });
 
   const failed=results.filter(result=>!result.ok);
