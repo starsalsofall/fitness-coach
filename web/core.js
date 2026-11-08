@@ -1,4 +1,4 @@
-export const VERSION = 1;
+export const VERSION = 2;
 // All copied application state is JSON data; keep older WebViews usable without a clone SDK.
 export function cloneData(value) {return typeof globalThis.structuredClone==='function'?globalThis.structuredClone(value):JSON.parse(JSON.stringify(value));}
 export const uid = () => globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random().toString(36).slice(2)}`;
@@ -7,17 +7,38 @@ export function dateKey(d = new Date()) {
 }
 export function offsetDate(key, delta) { const d = new Date(`${key}T12:00:00`); d.setDate(d.getDate()+delta); return dateKey(d); }
 export function initialState() {
-  return {version:VERSION, settings:{goal:'减脂，同时保持肌肉',calories:null,protein:null,reminders:false,trainingTime:'18:30',mealTime:'20:30',serverUrl:''}, plans:[], foods:[], days:{}, whoop:{records:[],syncedAt:null}, healthConnect:{records:[],syncedAt:null,source:'health-connect'}};
+  return {version:VERSION, settings:{goal:'减脂，同时保持肌肉',calories:null,protein:null,carbMode:'fixed',carbs:null,trainingCarbs:null,restCarbs:null,reminders:false,trainingTime:'18:30',mealTime:'20:30',serverUrl:''}, plans:[], foods:[], days:{}, whoop:{records:[],syncedAt:null}, healthConnect:{records:[],syncedAt:null,source:'health-connect'}};
 }
 export function ensureDay(state, key) {
   if (!state.days[key]) {
     const weekday = new Date(`${key}T12:00:00`).getDay();
-    state.days[key] = {tasks:state.plans.filter(p=>p.weekdays.includes(weekday)&&(!p.startDate||key>=p.startDate)).map(p=>({...cloneData(p),id:uid(),planId:p.id,status:'pending',sets:[],actualMinutes:null})), meals:[],foodNotes:[],foodComplete:false,recovery:null,weight:null,note:''};
+    state.days[key] = {tasks:state.plans.filter(p=>p.weekdays.includes(weekday)&&(!p.startDate||key>=p.startDate)).map(p=>({...cloneData(p),id:uid(),planId:p.id,status:'pending',sets:[],actualMinutes:null})), meals:[],foodNotes:[],foodComplete:false,recovery:null,weight:null,note:'',carbDayType:'auto'};
   }
   if (!state.days[key].foodNotes) state.days[key].foodNotes=[];
+  if (state.days[key].carbDayType===undefined) state.days[key].carbDayType='auto';
   return state.days[key];
 }
-export function totals(day) { return day.meals.reduce((t,m)=>({calories:t.calories+m.calories,protein:t.protein+m.protein}),{calories:0,protein:0}); }
+export function totals(day) {
+  const sum=day.meals.reduce((t,m)=>({calories:t.calories+m.calories,protein:t.protein+m.protein,knownCarbs:t.knownCarbs+(typeof m.carbs==='number'&&Number.isFinite(m.carbs)?m.carbs:0),carbUnknownCount:t.carbUnknownCount+(typeof m.carbs==='number'&&Number.isFinite(m.carbs)?0:1)}),{calories:0,protein:0,knownCarbs:0,carbUnknownCount:0});
+  sum.knownCarbs=Math.round(sum.knownCarbs*10)/10;
+  return {...sum,carbs:sum.carbUnknownCount?null:sum.knownCarbs};
+}
+/** A training-day target follows the schedule, never whether a box has been checked. */
+export function carbGoalFor(state,key) {
+  const settings=state.settings,day=state.days[key],manual=day?.carbDayType;
+  const overridden=manual==='training'||manual==='rest';
+  let dayType=overridden?manual:'unplanned',basis=overridden?'manual':'unplanned';
+  if(!overridden) {
+    const existing=Array.isArray(day?.tasks),weekday=new Date(`${key}T12:00:00`).getDay();
+    const tasks=existing?day.tasks:state.plans.filter(plan=>plan.weekdays.includes(weekday)&&(!plan.startDate||key>=plan.startDate));
+    if(tasks.some(task=>task.category==='力量'||task.category==='有氧'))dayType='training';
+    else if(tasks.length&&tasks.every(task=>task.category==='休息'||task.category==='拉伸'))dayType='rest';
+    if(dayType!=='unplanned')basis=existing?'tasks':'templates';
+  }
+  const mode=settings.carbMode==='cycle'?'cycle':'fixed';
+  const target=mode==='fixed'?settings.carbs:dayType==='training'?settings.trainingCarbs:dayType==='rest'?settings.restCarbs:null;
+  return {mode,target:typeof target==='number'&&Number.isFinite(target)?target:null,dayType,basis:mode==='fixed'?'fixed':basis,overridden};
+}
 export function progress(day) {
   const active = day.tasks.filter(t=>t.status!=='skipped');
   return {done:active.filter(t=>t.status==='done').length,total:active.length,skipped:day.tasks.filter(t=>t.status==='skipped').length};
@@ -52,7 +73,8 @@ export function feedback(state,key) {
 }
 export function addMeal(day, food, grams, meal) {
   if (!Number.isFinite(grams)||grams<=0||grams>10000) throw Error('请输入有效份量');
-  const entry={id:uid(),foodId:food.id,name:food.name,grams,meal,calories:Math.round(food.calories*grams/100*10)/10,protein:Math.round(food.protein*grams/100*10)/10};
+  if(food.carbs!=null&&(!Number.isFinite(food.carbs)||food.carbs<0||food.carbs>100))throw Error('食物碳水资料无效，请先修改常吃食物');
+  const entry={id:uid(),foodId:food.id,name:food.name,grams,meal,calories:Math.round(food.calories*grams/100*10)/10,protein:Math.round(food.protein*grams/100*10)/10,carbs:food.carbs==null?null:Math.round(food.carbs*grams/100*10)/10};
   day.meals.push(entry); day.foodComplete=false; return entry;
 }
 export function weekSummary(state,end) {
@@ -85,12 +107,17 @@ export function normalizeHealthConnect(payload) {
   if(payload?.sourcePackage!=null&&payload.sourcePackage!=='com.whoop.android')throw Error('Health Connect 数据来源不是 WHOOP');
   return {...normalizeHealthRecords(payload,'health-connect'),source:'health-connect',...(payload.sourcePackage?{sourcePackage:payload.sourcePackage}:{})};
 }
-export function validateState(s) {
+export function validateState(input) {
   const fail=()=>{throw Error('备份格式或字段无效，原数据未更改');};
   const num=(x,min,max)=>typeof x==='number'&&Number.isFinite(x)&&x>=min&&x<=max;
   const text=(x,n=500)=>typeof x==='string'&&x.length<=n;
-  if (!s||s.version!==VERSION||!s.settings||!Array.isArray(s.plans)||!Array.isArray(s.foods)||!s.days||typeof s.days!=='object'||Array.isArray(s.days)) fail();
+  if(!input||![1,VERSION].includes(input.version))fail();
+  let s;try{s=JSON.parse(JSON.stringify(input,(_key,value)=>{if(typeof value==='number'&&!Number.isFinite(value))throw Error('Invalid number');return value;}));}catch{fail();}
+  if (!s.settings||typeof s.settings!=='object'||Array.isArray(s.settings)||!Array.isArray(s.plans)||!Array.isArray(s.foods)||!s.days||typeof s.days!=='object'||Array.isArray(s.days)) fail();
   const cfg=s.settings;
+  if(cfg.carbMode===undefined)cfg.carbMode='fixed';
+  for(const key of ['carbs','trainingCarbs','restCarbs'])if(cfg[key]===undefined)cfg[key]=null;
+  if(!['fixed','cycle'].includes(cfg.carbMode)||['carbs','trainingCarbs','restCarbs'].some(key=>cfg[key]!==null&&!num(cfg[key],0,5000)))fail();
   if(!text(cfg.goal)||!text(cfg.serverUrl,2048)||typeof cfg.reminders!=='boolean')fail();
   for(const k of ['trainingTime','mealTime'])if(!/^([01]\d|2[0-3]):[0-5]\d$/.test(cfg[k]))fail();
   for(const k of ['quietStart','quietEnd'])if(cfg[k]!==undefined&&!/^([01]\d|2[0-3]):[0-5]\d$/.test(cfg[k]))fail();
@@ -105,11 +132,21 @@ export function validateState(s) {
     else {if(!['pending','done','skipped'].includes(t.status)||!Array.isArray(t.sets)||t.sets.some(v=>!v||!num(v.weight,0,2000)||!num(v.reps,1,10000)))fail();}
   };
   s.plans.forEach(t=>checkTask(t,true));
-  for(const f of s.foods)if(!f||!text(f.id)||!text(f.name,100)||!num(f.calories,0,10000)||!num(f.protein,0,1000)||f.portionGrams!=null&&!num(f.portionGrams,0.1,10000))fail();
+  for(const f of s.foods){
+    if(!f||!text(f.id)||!text(f.name,100)||!num(f.calories,0,10000)||!num(f.protein,0,1000)||f.portionGrams!=null&&!num(f.portionGrams,0.1,10000))fail();
+    if(f.carbs===undefined)f.carbs=null;
+    if(f.carbs!==null&&!num(f.carbs,0,100))fail();
+  }
   for(const [date,d]of Object.entries(s.days)) {
     if(!/^\d{4}-\d{2}-\d{2}$/.test(date)||!d||!Array.isArray(d.tasks)||!Array.isArray(d.meals)||typeof d.foodComplete!=='boolean'||!text(d.note,2000)||d.weight!==null&&!num(d.weight,1,500))fail();
     d.tasks.forEach(t=>checkTask(t));
-    for(const m of d.meals)if(!m||!text(m.id)||!text(m.name,100)||!text(m.meal,20)||!num(m.grams,0.1,10000)||!num(m.calories,0,100000)||!num(m.protein,0,10000))fail();
+    if(d.carbDayType===undefined)d.carbDayType='auto';
+    if(!['auto','training','rest'].includes(d.carbDayType))fail();
+    for(const m of d.meals){
+      if(!m||!text(m.id)||!text(m.name,100)||!text(m.meal,20)||!num(m.grams,0.1,10000)||!num(m.calories,0,100000)||!num(m.protein,0,10000))fail();
+      if(m.carbs===undefined)m.carbs=null;
+      if(m.carbs!==null&&!num(m.carbs,0,10000))fail();
+    }
     if(d.foodNotes!==undefined&&(!Array.isArray(d.foodNotes)||d.foodNotes.some(n=>!n||!text(n.id)||!text(n.text,2000)||!n.text.trim()||typeof n.createdAt!=='string'||!Number.isFinite(Date.parse(n.createdAt)))))fail();
     if(d.recovery!==null&&(!d.recovery||d.recovery.source!=='manual'||d.recovery.score!==null&&!num(d.recovery.score,0,100)||d.recovery.sleepHours!==null&&!num(d.recovery.sleepHours,0,48)))fail();
   }
@@ -117,5 +154,8 @@ export function validateState(s) {
   const whoop=normalizeWhoop(s.whoop),healthConnect=normalizeHealthConnect(s.healthConnect??{records:[],syncedAt:null});
   s.whoop=whoop;
   s.healthConnect=healthConnect;
+  s.version=VERSION;
   return s;
 }
+// Explicit migration entry point for upgrades; invalid data never modifies the source object.
+export function migrateState(input){return validateState(input);}

@@ -1,4 +1,4 @@
-import {offsetDate,totals} from './core.js';
+import {offsetDate,totals,carbGoalFor} from './core.js';
 
 // Check marks describe recorded actions, not measured training load or calorie expenditure.
 function recentTraining(state,key) {
@@ -38,6 +38,14 @@ export function coachingFor(state,key) {
     out.push({tone:'neutral',text:`${calories}${comparison}。饮食尚未记全，只用于接下来记录时参考${notes?`，另有 ${notes} 条备注未计入`:''}。`});
   } else if(recent.strengthDays>0&&settings.protein>0&&sum.protein<settings.protein) {
     out.push({tone:'neutral',text:`前两天有力量训练完成记录；今天已记全的蛋白质比你设置的目标少 ${(settings.protein-sum.protein).toFixed(1)} g，可先核对是否漏记或份量有误。应用不会据此增加训练或改变饮食目标。`});
+  }
+  const carbGoal=carbGoalFor(state,key);
+  if(carbGoal.mode==='cycle'&&carbGoal.dayType==='unplanned')out.push({tone:'neutral',text:'今天还没有可判断的训练安排，碳水目标暂未确定。可安排当天项目，或手动选择训练日／休息日。'});
+  if(sum.carbUnknownCount)out.push({tone:'neutral',text:`碳水已知部分 ${sum.knownCarbs.toFixed(1)} g，另有 ${sum.carbUnknownCount} 条饮食缺少碳水资料；不按 0 计算，暂不比较全天碳水目标。`});
+  else if(day.meals.length||carbGoal.target!==null){
+    const label=carbGoal.mode==='fixed'?'每日固定':carbGoal.dayType==='training'?'训练日':'休息日';
+    const target=carbGoal.target===null?'；尚未设置对应目标':` / 你设置的${label}目标 ${carbGoal.target} g`;
+    out.push({tone:'neutral',text:`碳水记录进度 ${sum.carbs.toFixed(1)} g${target}。${complete?'饮食已标记记全，数值按已输入资料估算。':'饮食尚未记全，仅显示已记录进度。'}`});
   }
   return out;
 }

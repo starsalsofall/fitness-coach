@@ -70,6 +70,7 @@ export function parseMealSpeech(text,foods) {
 export function repeatMeal(day,entry,id) {
   // Copy the previous nutrition snapshot rather than silently recalculating an edited food.
   const copy={...cloneData(entry),id,meal:inferredMeal()};
+  if(copy.carbs===undefined)copy.carbs=null;
   delete copy.previousDate;
   day.meals.push(copy);
   day.foodComplete=false;

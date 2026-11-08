@@ -2,7 +2,7 @@ plugins { id 'com.android.application' }
 android {
     namespace 'local.dailymotion'
     compileSdk 35
-    defaultConfig { applicationId 'local.dailymotion'; minSdk 26; targetSdk 35; versionCode 3; versionName '0.2.0' }
+    defaultConfig { applicationId 'local.dailymotion'; minSdk 26; targetSdk 35; versionCode 4; versionName '0.3.0' }
     signingConfigs {
         debug {
             // Keep the personal test key inside this project; ordinary CI can use its default debug key.

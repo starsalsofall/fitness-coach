@@ -87,7 +87,7 @@ public class MainActivity extends Activity {
                 String path = req.getUrl().getPath();
                 if (!"https".equals(req.getUrl().getScheme()) || !"app.local".equals(req.getUrl().getHost())) return denied();
                 if (path == null || path.equals("/")) path = "/index.html";
-                if (!Arrays.asList("/index.html", "/style.css", "/app.js", "/core.js", "/quick-log.js", "/weekly-plan.js", "/coaching.js").contains(path)) return denied();
+                if (!Arrays.asList("/index.html", "/style.css", "/app.js", "/core.js", "/quick-log.js", "/weekly-plan.js", "/coaching.js", "/ui-shared.js", "/nutrition-ui.js", "/today-view.js", "/weight-trends.js").contains(path)) return denied();
                 try {
                     String mime = path.endsWith(".js") ? "text/javascript" : path.endsWith(".css") ? "text/css" : "text/html";
                     Map<String,String> headers = new HashMap<>(); headers.put("Cache-Control","no-store"); headers.put("X-Content-Type-Options","nosniff");

@@ -40,22 +40,29 @@ fitness-coach/
 ├── test/
 │   ├── coaching.test.mjs
 │   ├── core.test.mjs
+│   ├── nutrition.test.mjs
 │   ├── quick-log.test.mjs
 │   ├── ui-audit.mjs
+│   ├── ui-nutrition.mjs
 │   ├── ui-readiness.mjs
 │   ├── ui-smoke.mjs
 │   ├── ui-weekly.mjs
 │   ├── verify-apk.mjs
 │   ├── weekly-plan.test.mjs
+│   ├── weight-trends.test.mjs
 │   └── whoop.test.mjs
 ├── web/
 │   ├── app.js
 │   ├── coaching.js
 │   ├── core.js
 │   ├── index.html
+│   ├── nutrition-ui.js
 │   ├── quick-log.js
 │   ├── style.css
-│   └── weekly-plan.js
+│   ├── today-view.js
+│   ├── ui-shared.js
+│   ├── weekly-plan.js
+│   └── weight-trends.js
 ├── .env.example
 ├── .gitignore
 ├── AGENTS.md
@@ -77,6 +84,7 @@ fitness-coach/
 ├── UPDATE.md
 ├── V1-REQUIREMENTS.md
 ├── VALIDATION.md
+├── WEEKLY-PLAN-TEMPLATE.txt
 ├── WEEKLY-PLAN.md
 ├── WHOOP-SETUP.md
 ├── WHOOP-SYNC.md
@@ -88,7 +96,11 @@ fitness-coach/
 | 路径 | 责任 |
 | --- | --- |
 | web/app.js | 页面、打卡、饮食确认、语音草稿、整周导入界面、备份与失败提示；同步暂停 |
-| web/core.js | 日期、计划快照、汇总、目标反馈、来源选择和备份校验 |
+| web/core.js | 日期、v1→v2迁移、计划快照、碳水汇总/目标、来源与备份校验 |
+| web/today-view.js | 精简首页、待完成安排与一键记餐入口 |
+| web/nutrition-ui.js | 碳水目标、未知营养提示与模式表单 |
+| web/weight-trends.js | 实测体重、7日均值、7/30天安全SVG图 |
+| web/ui-shared.js | HTML转义与显示格式 |
 | web/weekly-plan.js | 整周文字解析、分项、单周/重复导入、生效日期、去重及历史保留 |
 | web/coaching.js | 今日饮食与前两天实际训练勾选的只读反馈 |
 | web/quick-log.js | 最近饮食复用、文字中的食物/份量匹配、静默时间判断；不调用云模型 |
@@ -102,7 +114,7 @@ fitness-coach/
 | test/ | 业务、接口和手机尺寸交互回归 |
 | V1-REQUIREMENTS.md | 一期功能、取舍、设备前提和交付验收 |
 | WHOOP-SYNC.md | 原同步技术资料，当前阶段暂停 |
-| WEEKLY-PLAN.md | 聊天/备忘录整周导入格式与使用范围 |
+| WEEKLY-PLAN.md、WEEKLY-PLAN-TEMPLATE.txt | 导入说明与可直接粘贴的整周模板 |
 | UPDATE.md、make-update.ps1 | 同应用同签名版本迭代与更新包生成 |
 | android/update-identity.json | 公开证书指纹与最低版本码，不含私钥 |
 | APP-REVIEW.md | 本轮查出的问题、修复和未完成项 |

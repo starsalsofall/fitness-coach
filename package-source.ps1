@@ -15,7 +15,7 @@ function Copy-SourceTree([string]$Source, [string]$Destination) {
     }
 }
 foreach ($directory in @('android', 'web', 'test', '.github')) { Copy-SourceTree (Join-Path $projectRoot $directory) (Join-Path $stagingRoot $directory) }
-$rootFiles = @('.env.example','.gitignore','AGENTS.md','package.json','package-lock.json','server.mjs','whoop.mjs','README.md','RESEARCH.md','VALIDATION.md','APP-REVIEW.md','V1-REQUIREMENTS.md','WHOOP-SYNC.md','WHOOP-SETUP.md','PROJECT-TREE.md','PROJECT-STATUS.md','INSTALL-ANDROID.md','CHANGELOG.md','UPDATE.md','WEEKLY-PLAN.md','build-android.ps1','make-update.ps1','setup-whoop.ps1','start-preview.cmd','package-source.ps1')
+$rootFiles = @('.env.example','.gitignore','AGENTS.md','package.json','package-lock.json','server.mjs','whoop.mjs','README.md','RESEARCH.md','VALIDATION.md','APP-REVIEW.md','V1-REQUIREMENTS.md','WHOOP-SYNC.md','WHOOP-SETUP.md','PROJECT-TREE.md','PROJECT-STATUS.md','INSTALL-ANDROID.md','CHANGELOG.md','UPDATE.md','WEEKLY-PLAN.md','WEEKLY-PLAN-TEMPLATE.txt','build-android.ps1','make-update.ps1','setup-whoop.ps1','start-preview.cmd','package-source.ps1')
 foreach ($name in $rootFiles) { Copy-Item -LiteralPath (Join-Path $projectRoot $name) -Destination (Join-Path $stagingRoot $name) }
 $archivePath = Join-Path $artifactRoot 'daily-motion-source.zip'
 Compress-Archive -Path (Join-Path $stagingRoot '*') -DestinationPath $archivePath -Force

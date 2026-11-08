@@ -34,7 +34,7 @@ for(let i=0;i<count;i++){
   const name=data.subarray(pos+46,pos+46+nameLength).toString('utf8');assert.equal(data.readUInt32LE(local),0x04034b50);const start=local+30+data.readUInt16LE(local+26)+data.readUInt16LE(local+28);const payload=data.subarray(start,start+size);
   assert.ok(method===0||method===8,'Unsupported APK entry compression');entries.set(name,method===0?payload:inflateRawSync(payload));pos+=46+nameLength+extra+comment;
 }
-for(const name of ['app.js','core.js','index.html','quick-log.js','style.css','weekly-plan.js','coaching.js'])assert.deepEqual(entries.get(`assets/${name}`),await readFile(`web/${name}`),`${name} in APK differs from source`);
+for(const name of ['app.js','core.js','index.html','quick-log.js','style.css','weekly-plan.js','coaching.js','ui-shared.js','nutrition-ui.js','today-view.js','weight-trends.js'])assert.deepEqual(entries.get(`assets/${name}`),await readFile(`web/${name}`),`${name} in APK differs from source`);
 assert.ok([...entries.keys()].some(n=>/^classes\d*\.dex$/.test(n)));
 assert.ok(entries.has('res/drawable/ic_launcher.xml'));
 for(const name of entries.keys())assert.ok(!/(^|\/)(?:\.env|private|.*\.keystore)(\/|$)/.test(name),'Private configuration in APK');

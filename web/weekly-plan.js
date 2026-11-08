@@ -49,6 +49,22 @@ function categoryOf(text){
   if(/有氧|快走|慢走|步行|散步|跑步|慢跑|骑行|单车|游泳|椭圆|跳绳|cardio|walk|run|cycl|swim/i.test(text))return '有氧';
   return '力量';
 }
+const NOTE_PREFIX='(?:组间休息|组间间歇|组内休息|休息(?:时间|间隔)?\\s*[:：]?\\s*\\d|(?:备注|说明|要求|要点|提示|注意)\\s*[:：]|(?:配速|速度|强度|负重|重量|节奏|RIR|RPE)(?=\\s|[:：]|\\d))';
+const IS_NOTE=new RegExp(`^${NOTE_PREFIX}`,'i');
+const NOTE_START=new RegExp(`(?:[,，（(]|\\s)\\s*(?=${NOTE_PREFIX})`,'i');
+const MINUTE_UNIT='(?:分钟|分鍾|mins?\\b|minutes?\\b)';
+const NUMBER_RANGE='\\d+(?:\\.\\d+)?\\s*(?:[-–—－~～]|至|到)\\s*\\d+(?:\\.\\d+)?';
+const MINUTE_RANGE=new RegExp(`\\d+(?:\\.\\d+)?\\s*(?:${MINUTE_UNIT})?\\s*(?:[-–—－~～]|至|到)\\s*\\d+(?:\\.\\d+)?\\s*${MINUTE_UNIT}`,'i');
+const DETAIL_START=new RegExp(`\\s+(?=\\d)|(?=(?:${NUMBER_RANGE}|\\d+(?:\\.\\d+)?)\\s*(?:组|次|分钟|分鍾|mins?\\b|minutes?\\b|kg\\b|公斤|秒|[x×*]))|[（(,，]|\\s+(?=${NOTE_PREFIX})`,'i');
+function commaParts(text){
+  const parts=[];let depth=0,start=0;
+  for(let i=0;i<text.length;i++){
+    if(/[（(]/.test(text[i]))depth++;
+    else if(/[）)]/.test(text[i]))depth=Math.max(0,depth-1);
+    else if(/[,，]/.test(text[i])&&depth===0){parts.push(text.slice(start,i));start=i+1;}
+  }
+  parts.push(text.slice(start));return parts;
+}
 function isMuscleHeading(text){
   const value=norm(text).replace(/^[（(]\s*|\s*[）)][:：]?$/g,'').replace(/[:：]$/,'').replace(/(?:训练日|训练|日)$/,'').trim();
   // Recognize only lists of muscle groups, not exercise names such as 胸推、肩推 or 腿举.
@@ -57,23 +73,30 @@ function isMuscleHeading(text){
 function parseExercise(raw,days,lineNumber,errors){
   let text=norm(raw.replace(/^\s*(?:[-*•●]|\d+[.)、])\s*/,'')).replace(/(\d)：(?=\d)/g,'$1:');
   if(!text)return null;
-  const category=categoryOf(text),timeMatches=[...text.matchAll(/(?:^|\s)([0-2]?\d:[0-5]\d)(?=\s|$)/g)];
+  // Commas are not reliable exercise separators. Keep only clearly labelled
+  // continuation notes; reject an ambiguous row instead of swallowing actions.
+  if(commaParts(text).slice(1).some(part=>norm(part)&&!IS_NOTE.test(norm(part)))){errors.push(`第 ${lineNumber} 行逗号后可能有另一个动作。多个动作请分别换行或用分号分隔；同一动作的组次请用空格，备注可写“组间休息60秒”。`);return null;}
+  const timeMatches=[...text.matchAll(/(?:^|\s)([0-2]?\d:[0-5]\d)(?=\s|$)/g)];
   let time='18:30';
   if(timeMatches.length>1){errors.push(`第 ${lineNumber} 行有多个时间，请拆成单独项目。`);return null;}
   if(timeMatches.length){time=timeMatches[0][1].padStart(5,'0');if(!/^([01]\d|2[0-3]):[0-5]\d$/.test(time)){errors.push(`第 ${lineNumber} 行时间无效。`);return null;}text=norm(text.replace(timeMatches[0][0],' '));}
   if(/\d{1,2}:\d{2}/.test(text)){errors.push(`第 ${lineNumber} 行时间无效或缺少空格，请使用“18:30”。`);return null;}
+  const explicit=text.match(/^(力量|有氧|拉伸|休息)\s*[:：|]\s*/);
+  if(explicit)text=text.slice(explicit[0].length);
+  if(MINUTE_RANGE.test(text)){errors.push(`第 ${lineNumber} 行包含分钟时长范围，请改成一个明确单值（例如“跑步25分钟”），不要写“20-30分钟”。`);return null;}
   let minutes=0;
-  const durations=[...text.matchAll(/(\d+(?:\.\d+)?)\s*(?:分钟|分鍾|mins?\b|minutes?\b)/gi)];
+  const noteIndex=text.search(NOTE_START),durationText=noteIndex<0?text:text.slice(0,noteIndex);
+  const durations=[...durationText.matchAll(/(\d+(?:\.\d+)?)\s*(?:分钟|分鍾|mins?\b|minutes?\b)/gi)];
   // A duration per set (e.g. 3组×2分钟) is an instruction, not total workout minutes.
-  const duration=durations.length===1&&!/(?:组|[x×*])\s*\d+(?:\.\d+)?\s*(?:分钟|分鍾|mins?\b|minutes?\b)/i.test(text)?durations[0]:null;
+  const duration=durations.length===1&&!/(?:组|[x×*])\s*\d+(?:\.\d+)?\s*(?:分钟|分鍾|mins?\b|minutes?\b)/i.test(durationText)?durations[0]:null;
   if(duration){minutes=Number(duration[1]);if(minutes>1440){errors.push(`第 ${lineNumber} 行时长超过 1440 分钟。`);return null;}}
-  text=text.replace(/^(?:力量|有氧|拉伸|休息)\s*[:：|]\s*/,'');
-  const detailIndex=text.search(/\s+(?=\d)|(?=\d+(?:\.\d+)?\s*(?:组|次|分钟|分鍾|mins?\b|minutes?\b|kg\b|公斤|秒|[x×*]))|[（(]/i);
+  const detailIndex=text.search(DETAIL_START);
   let name=norm(detailIndex<0?text:text.slice(0,detailIndex));
-  let instructions=detailIndex<0?'':norm(text.slice(detailIndex));
+  let instructions=detailIndex<0?'':norm(text.slice(detailIndex).replace(/^[,，]\s*/,''));
   if(duration)instructions=norm(instructions.replace(duration[0],''));
   name=name.replace(/[：:|,，]+$/,'').trim();
   if(!name||name.length>100||instructions.length>500){errors.push(`第 ${lineNumber} 行项目名称或要求过长/为空，请拆分后重试。`);return null;}
+  const category=explicit?.[1]??categoryOf(name);
   return {name,category,time,minutes,weekdays:[...days],instructions};
 }
 

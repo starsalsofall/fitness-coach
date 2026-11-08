@@ -33,6 +33,40 @@ test('Markdown emphasis and muscle group headings do not produce extra check-in 
 test('per-set time stays an instruction and is never converted into total exercise minutes',()=>{
   const result=parseWeeklyPlan('周一\n平板支撑 3组×2分钟\n深蹲 4组×10次');assert.deepEqual(result.errors,[]);assert.equal(result.items[0].minutes,0);assert.equal(result.items[0].instructions,'3组×2分钟');
 });
+
+test('category comes from the action name or explicit prefix, never from rest notes',()=>{
+  const result=parseWeeklyPlan('周一\n深蹲3x12，组间休息60秒\n卧推 3组×10次（组间休息2分钟）\n力量：卧推3x12，备注：休息充分后再做\n拉伸：肩颈放松10分钟，组间休息60秒\n深蹲，组间休息2分钟\n周二：休息日');
+  assert.deepEqual(result.errors,[]);assert.deepEqual(result.items.map(item=>item.category),['力量','力量','力量','拉伸','力量','休息']);
+  assert.deepEqual(result.items.map(item=>item.name),['深蹲','卧推','卧推','肩颈放松','深蹲','休息日']);
+  assert.equal(result.items[0].instructions,'3x12，组间休息60秒');assert.equal(result.items[1].minutes,0);assert.match(result.items[1].instructions,/组间休息2分钟/);assert.equal(result.items[3].minutes,10);assert.equal(result.items[4].minutes,0);
+});
+
+test('comma-separated actions are rejected with formatting guidance instead of silently merged',()=>{
+  for(const comma of ['，',',']){
+    const result=parseWeeklyPlan(`周一：深蹲3x12${comma}划船3x12${comma}快走20分钟`);
+    assert.equal(result.items.length,0);assert.match(result.errors.join(''),/换行或用分号/);
+  }
+  const corrected=parseWeeklyPlan('周一：深蹲3x12；划船3x12；快走20分钟');
+  assert.deepEqual(corrected.errors,[]);assert.deepEqual(corrected.items.map(item=>item.name),['深蹲','划船','快走']);assert.deepEqual(corrected.items.map(item=>item.category),['力量','力量','有氧']);assert.equal(corrected.items[2].minutes,20);
+  const afterNote=parseWeeklyPlan('周一：深蹲3x12，组间休息60秒，快走20分钟');assert.equal(afterNote.items.length,0);assert.match(afterNote.errors.join(''),/换行或用分号/);
+});
+
+test('unambiguous comma notes and parenthesized notes remain one exercise',()=>{
+  const result=parseWeeklyPlan('周一\n卧推3x12，组间休息60秒，RIR2\n深蹲3x12（备注：缓慢下放，保持核心）\n快走20分钟，配速6分钟/公里');
+  assert.deepEqual(result.errors,[]);assert.equal(result.items.length,3);assert.deepEqual(result.items.map(item=>item.name),['卧推','深蹲','快走']);assert.deepEqual(result.items.map(item=>item.minutes),[0,0,20]);assert.match(result.items[0].instructions,/RIR2/);assert.match(result.items[1].instructions,/缓慢下放，保持核心/);assert.match(result.items[2].instructions,/配速6分钟/);
+});
+
+test('minute ranges never silently select an endpoint',()=>{
+  for(const range of ['20-30分钟','20~30分钟','20至30分钟','20 到 30分钟','20～30分钟','20—30分钟','20分钟-30分钟','20-30min']){
+    const result=parseWeeklyPlan(`周一\n跑步${range}`);assert.equal(result.items.length,0,range);assert.match(result.errors.join(''),/明确单值/,range);
+  }
+  const corrected=parseWeeklyPlan('周一：跑步25分钟');assert.deepEqual(corrected.errors,[]);assert.equal(corrected.items[0].minutes,25);
+});
+
+test('set and repetition ranges remain literal instructions with a clean action name',()=>{
+  const result=parseWeeklyPlan('周一\n深蹲3-4组×8-12次，组间休息60秒\n卧推3~4组×8~12次\n划船3至4组×8至12次');
+  assert.deepEqual(result.errors,[]);assert.deepEqual(result.items.map(item=>item.name),['深蹲','卧推','划船']);assert.deepEqual(result.items.map(item=>item.category),['力量','力量','力量']);assert.ok(result.items.every(item=>item.minutes===0));assert.equal(result.items[0].instructions,'3-4组×8-12次，组间休息60秒');assert.equal(result.items[1].instructions,'3~4组×8~12次');assert.equal(result.items[2].instructions,'3至4组×8至12次');
+});
 test('one-time week preserves completed checkmarks and meals and does not create recurring plans',()=>{
   const state=initialState(),day=ensureDay(state,monday);day.tasks=[{id:'done',name:'深蹲',category:'力量',time:'18:30',minutes:0,instructions:'3组×8次',status:'done',sets:[{weight:50,reps:8}],actualMinutes:15}];day.meals=[{id:'meal',name:'午饭',meal:'午餐',grams:100,calories:500,protein:30}];day.foodComplete=true;
   const items=parseWeeklyPlan('周一\n深蹲3组×8次\n卧推3组×10次\n周二\n快走20分钟').items;

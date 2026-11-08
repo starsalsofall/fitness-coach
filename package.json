@@ -1,6 +1,6 @@
 {
   "name": "daily-motion",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "private": true,
   "type": "module",
   "scripts": {
@@ -10,7 +10,8 @@
     "test:audit": "node test/ui-audit.mjs",
     "verify:apk": "node test/verify-apk.mjs",
     "test:readiness": "node test/ui-readiness.mjs",
-    "test:weekly-ui": "node test/ui-weekly.mjs"
+    "test:weekly-ui": "node test/ui-weekly.mjs",
+    "test:nutrition-ui": "node test/ui-nutrition.mjs"
   },
   "engines": {
     "node": ">=22"

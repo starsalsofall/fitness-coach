@@ -37,7 +37,7 @@ export function createApp(config={},options={}) {
       }
       if(url.pathname==='/oauth/callback'&&req.method==='GET'){await whoop.callback(url.searchParams);res.writeHead(200,{'Content-Type':'text/plain; charset=utf-8'});res.end('WHOOP 授权完成。请返回“每日动一动”，点击立即同步。');return;}
       const path=url.pathname==='/'?'/index.html':url.pathname;
-      if(!['/index.html','/style.css','/core.js','/app.js','/quick-log.js','/weekly-plan.js','/coaching.js'].includes(path)||!['GET','HEAD'].includes(req.method)){json(404,{error:'页面不存在'});return;}
+      if(!['/index.html','/style.css','/core.js','/app.js','/quick-log.js','/weekly-plan.js','/coaching.js','/ui-shared.js','/nutrition-ui.js','/today-view.js','/weight-trends.js'].includes(path)||!['GET','HEAD'].includes(req.method)){json(404,{error:'页面不存在'});return;}
       const file=await readFile(join(root,'web',path.slice(1)));
       res.writeHead(200,{'Content-Type':path.endsWith('.js')?'text/javascript; charset=utf-8':path.endsWith('.css')?'text/css; charset=utf-8':'text/html; charset=utf-8','Content-Security-Policy':"default-src 'self'; script-src 'self'; style-src 'self'; connect-src 'self' https:; img-src 'self' data:; object-src 'none'; base-uri 'none'; frame-ancestors 'none'"});res.end(req.method==='HEAD'?undefined:file);
     }catch(e){json(502,{error:e.message});}

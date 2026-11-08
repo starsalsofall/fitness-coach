@@ -122,6 +122,47 @@ public class ReminderReceiver extends BroadcastReceiver {
         if(recorded==0)return "前两天未记录，按实际状态安排，不作漏练判断。";
         return "前两天记录中有 "+done+" 项运动完成"+(recorded<2?"，另一天未记录":"")+"。";
     }
+    /** Missing/null is unknown; an explicitly recorded zero remains a valid value. */
+    private static Double carbohydrate(JSONObject object,String field) {
+        if(object==null||!object.has(field)||object.isNull(field))return null;
+        Object raw=object.opt(field);if(!(raw instanceof Number))return null;
+        double value=((Number)raw).doubleValue();return Double.isFinite(value)&&value>=0?value:null;
+    }
+    /** The day's planned type is independent of completed or skipped check marks. */
+    private static String carbDayType(JSONObject data,JSONObject day,long now) {
+        String manual=day==null?"auto":day.optString("carbDayType","auto");
+        if(manual.equals("training")||manual.equals("rest"))return manual;
+        JSONArray tasks=day==null?data.optJSONArray("plans"):day.optJSONArray("tasks");
+        boolean templates=day==null,allRest=true;int count=0;
+        Calendar calendar=Calendar.getInstance();calendar.setTimeInMillis(now);int weekday=calendar.get(Calendar.DAY_OF_WEEK)-1;
+        if(tasks!=null)for(int i=0;i<tasks.length();i++) {
+            JSONObject task=tasks.optJSONObject(i);if(task==null)continue;
+            if(templates) {
+                if(!task.optString("startDate","").isEmpty()&&date(now).compareTo(task.optString("startDate"))<0)continue;
+                JSONArray weekdays=task.optJSONArray("weekdays");boolean matches=false;
+                if(weekdays!=null)for(int j=0;j<weekdays.length();j++)if(weekdays.optInt(j,-1)==weekday)matches=true;
+                if(!matches)continue;
+            }
+            count++;String category=task.optString("category","");
+            if(category.equals("力量")||category.equals("有氧"))return "training";
+            if(!category.equals("休息")&&!category.equals("拉伸"))allRest=false;
+        }
+        return count>0&&allRest?"rest":"unknown";
+    }
+    private static String carbohydrateText(JSONObject data,JSONObject settings,JSONObject day,JSONArray meals,long now) {
+        double knownCarbs=0;int missing=0;
+        if(meals!=null)for(int i=0;i<meals.length();i++) {
+            Double value=carbohydrate(meals.optJSONObject(i),"carbs");
+            if(value==null)missing++;else knownCarbs+=value;
+        }
+        String text=(missing>0?"已知碳水 ":"已记录碳水 ")+String.format(Locale.US,"%.1f",knownCarbs)+" g"+(missing>0?"，另 "+missing+" 项待补。":"。");
+        boolean cycle=settings.optString("carbMode","fixed").equals("cycle");
+        String dayType=cycle?carbDayType(data,day,now):"fixed";
+        Double target=cycle?(dayType.equals("training")?carbohydrate(settings,"trainingCarbs"):dayType.equals("rest")?carbohydrate(settings,"restCarbs"):null):carbohydrate(settings,"carbs");
+        if(target!=null)text+="自设碳水目标 "+String.format(Locale.US,"%.1f",target)+" g"+(cycle?(dayType.equals("training")?"（训练日）":"（休息日）"):"")+"。";
+        else text+=cycle&&dayType.equals("unknown")?"今天日型尚未确定，暂不比较碳水目标。":"碳水目标未设置。";
+        return text;
+    }
     private static String notificationText(JSONObject data,JSONObject settings,int kind,long now) {
         JSONObject days=data.optJSONObject("days"),day=days==null?null:days.optJSONObject(date(now));
         if(kind==2) {
@@ -136,6 +177,7 @@ public class ReminderReceiver extends BroadcastReceiver {
                 text+=difference>0?"已记录热量高于自设目标 "+difference+" kcal，先核对份量。":"距自设热量目标尚余 "+Math.abs(difference)+" kcal。";
             }
             if(proteinTarget>0)text+="蛋白质记录进度 "+String.format(Locale.US,"%.1f",protein)+" / "+String.format(Locale.US,"%.1f",proteinTarget)+" g。";
+            text+=carbohydrateText(data,settings,day,meals,now);
             JSONArray notes=day==null?null:day.optJSONArray("foodNotes");
             if(notes!=null&&notes.length()>0)text+="另有 "+notes.length()+" 条备注未计入。";
             return text+"饮食尚未记全，说一句补录，确认后保存。";
@@ -153,9 +195,9 @@ public class ReminderReceiver extends BroadcastReceiver {
                 if(weekdays!=null)for(int j=0;j<weekdays.length();j++)if(weekdays.optInt(j,-1)==weekday)matches=true;
                 if(!matches)continue;
             } else if(!task.optString("status","pending").equals("pending"))continue;
-            if(count<2){if(names.length()>0)names.append("、");names.append(shortName(task));}count++;
+            if(count<3){if(names.length()>0)names.append("、");names.append(shortName(task));}count++;
         }
-        return "今天还有 "+count+" 项待确认"+(names.length()>0?"："+names:"")+"。"+recentTrainingText(data,now)+"打开后逐项勾选，或调整安排。";
+        return "今天还有 "+count+" 项待确认"+(names.length()>0?"："+names+(count>3?"等":""):"")+"。"+recentTrainingText(data,now)+"打开后逐项勾选，或调整安排。";
     }
     private static PendingIntent alarmIntent(Context c,int kind,long at) {
         Intent intent=new Intent(c,ReminderReceiver.class).setAction(ALARM).putExtra("kind",kind).putExtra("day",date(at));
