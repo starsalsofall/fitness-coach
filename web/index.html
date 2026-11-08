@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#173c36">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; connect-src 'self' https:; img-src 'self' data:; object-src 'none'; base-uri 'none'">
+  <title>每日动一动</title><link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="shell">
+    <header><a class="brand" href="#today"><span class="logo">↗</span><span>每日动一动<small>YOUR DAILY MOTION</small></span></a><span class="local">● 本地优先</span></header>
+    <main id="app" aria-live="polite"><p class="muted">正在打开每日动一动…如果一直停在这里，请更新手机的系统网页组件后重试。</p></main>
+    <nav aria-label="主导航"><button data-tab="today">◉<span>今天</span></button><button data-tab="training">↗<span>训练</span></button><button data-tab="food">◷<span>饮食</span></button><button data-tab="trends">▥<span>回顾</span></button><button data-tab="settings">⚙<span>设置</span></button></nav>
+  </div>
+  <div id="modal-backdrop" hidden></div>
+  <dialog id="modal"><div id="modal-body"></div><button id="close-dialog" class="secondary wide">取消</button></dialog>
+  <div id="toast" role="status"></div>
+  <input id="import-file" type="file" accept="application/json,.json" hidden>
+  <script type="module" src="app.js"></script>
+</body></html>

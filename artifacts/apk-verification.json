@@ -1,0 +1,16 @@
+{
+  "verifiedAt": "2026-11-08T06:44:37.922Z",
+  "apk": "C:\\Users\\tan\\Desktop\\codex\\fitness-coach\\artifacts\\daily-motion-0.1.1-debug.apk",
+  "bytes": 92097,
+  "sha256": "9396b8f8adfedd9d38342d367871c62c823e5ed07e52c9e36f5e491846a120f2",
+  "applicationId": "local.dailymotion",
+  "version": "0.1.1",
+  "versionCode": 2,
+  "minSdk": 26,
+  "targetSdk": 35,
+  "signatureV2": true,
+  "certificateSha256": "86958fb4a70e1fa32fa569b0339d07e88b24ee9a9c83fb67c68817ea0ebde0f3",
+  "packagedAssetsMatchSource": true,
+  "containsPrivateConfiguration": false,
+  "entryCount": 13
+}
